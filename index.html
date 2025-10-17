@@ -18,6 +18,11 @@
             overflow: hidden;
             height: 100vh;
             width: 100vw;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
         }
 
         .container {
@@ -136,23 +141,58 @@
             font-weight: 500;
         }
 
-        /* Responsive adjustments */
+        /* Hide buttons on mobile */
         @media (max-width: 768px) {
-            .nav-btn {
-                width: 50px;
-                height: 50px;
+            .navigation {
+                display: none;
+            }
+            
+            .page-indicator {
+                bottom: 20px;
             }
         }
 
+        /* Show buttons on desktop */
+        @media (min-width: 769px) {
+            .navigation {
+                display: flex;
+            }
+        }
+
+        /* Responsive adjustments */
         @media (max-width: 480px) {
-            .nav-btn {
-                width: 40px;
-                height: 40px;
+            .page-indicator {
+                bottom: 15px;
             }
             
-            .nav-btn svg {
-                width: 18px;
-                height: 18px;
+            .dot {
+                width: 8px;
+                height: 8px;
+            }
+        }
+
+        /* Swipe instruction for mobile */
+        .swipe-hint {
+            position: absolute;
+            bottom: 60px;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.9rem;
+            font-family: 'Montserrat', sans-serif;
+            animation: fadeInOut 3s ease-in-out infinite;
+            display: none;
+        }
+
+        @keyframes fadeInOut {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        @media (max-width: 768px) {
+            .swipe-hint {
+                display: block;
             }
         }
     </style>
@@ -165,6 +205,8 @@
     <div class="container">
         <div class="background"></div>
         <div class="background-overlay"></div>
+        
+        <div class="swipe-hint">Swipe to navigate</div>
         
         <div class="navigation">
             <button class="nav-btn" id="prevBtn">
@@ -203,6 +245,7 @@
         const nextBtn = document.getElementById('nextBtn');
         const dots = document.querySelectorAll('.dot');
         const loading = document.querySelector('.loading');
+        const swipeHint = document.querySelector('.swipe-hint');
 
         // Preload images for better performance
         function preloadImages() {
@@ -229,7 +272,7 @@
             });
         }
 
-        // Event Listeners for navigation
+        // Event Listeners for navigation (desktop only)
         prevBtn.addEventListener('click', () => {
             currentIndex = (currentIndex - 1 + images.length) % images.length;
             updateImage();
@@ -248,7 +291,7 @@
             });
         });
 
-        // Keyboard navigation
+        // Keyboard navigation (desktop only)
         document.addEventListener('keydown', (e) => {
             if (e.key === 'ArrowLeft') {
                 currentIndex = (currentIndex - 1 + images.length) % images.length;
@@ -259,32 +302,51 @@
             }
         });
 
-        // Swipe support for touch devices
+        // Enhanced swipe support for mobile devices
         let touchStartX = 0;
+        let touchStartY = 0;
         let touchEndX = 0;
+        let touchEndY = 0;
 
         document.addEventListener('touchstart', e => {
             touchStartX = e.changedTouches[0].screenX;
+            touchStartY = e.changedTouches[0].screenY;
         });
 
         document.addEventListener('touchend', e => {
             touchEndX = e.changedTouches[0].screenX;
+            touchEndY = e.changedTouches[0].screenY;
             handleSwipe();
         });
 
         function handleSwipe() {
             const swipeThreshold = 50;
+            const verticalThreshold = 100; // Prevent vertical scroll from triggering swipe
             
-            if (touchEndX < touchStartX - swipeThreshold) {
-                // Swipe left - next
-                currentIndex = (currentIndex + 1) % images.length;
-                updateImage();
-            }
+            const deltaX = touchEndX - touchStartX;
+            const deltaY = Math.abs(touchEndY - touchStartY);
             
-            if (touchEndX > touchStartX + swipeThreshold) {
-                // Swipe right - previous
-                currentIndex = (currentIndex - 1 + images.length) % images.length;
-                updateImage();
+            // Only process horizontal swipes with minimal vertical movement
+            if (Math.abs(deltaX) > swipeThreshold && deltaY < verticalThreshold) {
+                if (deltaX < 0) {
+                    // Swipe left - next
+                    currentIndex = (currentIndex + 1) % images.length;
+                    updateImage();
+                } else {
+                    // Swipe right - previous
+                    currentIndex = (currentIndex - 1 + images.length) % images.length;
+                    updateImage();
+                }
+                
+                // Hide swipe hint after first successful swipe
+                if (swipeHint.style.display !== 'none') {
+                    setTimeout(() => {
+                        swipeHint.style.opacity = '0';
+                        setTimeout(() => {
+                            swipeHint.style.display = 'none';
+                        }, 500);
+                    }, 1000);
+                }
             }
         }
 
@@ -301,6 +363,16 @@
                 }, 500);
             }, 1000);
         });
+
+        // Auto-hide swipe hint after 5 seconds
+        setTimeout(() => {
+            if (swipeHint.style.display !== 'none') {
+                swipeHint.style.opacity = '0';
+                setTimeout(() => {
+                    swipeHint.style.display = 'none';
+                }, 500);
+            }
+        }, 5000);
     </script>
 </body>
 </html>
